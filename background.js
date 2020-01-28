@@ -32,8 +32,6 @@ function setTabZoom() {
 			}
 		});
 
-
-
 	});
 }
 
