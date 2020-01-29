@@ -3,24 +3,52 @@ chrome.runtime.onInstalled.addListener(function () {
 		console.log("The color is green.");
 	});
 });
-chrome.tabs.onUpdated.addListener(function () {
-	setTabZoom()
-});
 
 chrome.tabs.onCreated.addListener(function () {
-	setTabZoom()
+	chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
+		var activeTab = tabs[0];
+
+		if (activeTab.pendingUrl != null) {
+			if (activeTab.pendingUrl.startsWith("chrome://")) {
+				return
+			}
+		}
+		sleep(1750).then(() => {
+			setTabZoom()
+		});
+
+
+	});
+
 });
 
 chrome.tabs.onActivated.addListener(function (activeInfo) {
 	setTabZoom()
 });
+chrome.tabs.onZoomChange.addListener(function (zoomChangeInfo) {
+	setTabZoom(zoomChangeInfo)
+});
 
 
-function setTabZoom() {
+function setTabZoom(info) {
+	zoomVal = 1.5;
+
+	// dont do anything on user zoom change
+	if (info != null) {
+		zoomVal = info.zoomSettings.newZoomFactor;
+		return
+
+	}
+
 	chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
 		// since only one tab should be active and in the current window at once
 		// the return variable should only have one entry
 		var activeTab = tabs[0];
+
+		if (activeTab == null) {
+			return
+		}
+
 
 		//alert("Your screen resolution is: " + window.screen.width * window.devicePixelRatio + "x" + window.screen.height * window.devicePixelRatio);
 
@@ -35,3 +63,6 @@ function setTabZoom() {
 	});
 }
 
+function sleep(time) {
+	return new Promise((resolve) => setTimeout(resolve, time));
+}
