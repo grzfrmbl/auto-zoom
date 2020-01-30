@@ -1,5 +1,13 @@
 let tabIds = new Map();
 
+chrome.tabs.onActivated.addListener(function (activeInfo) {
+	setTabZoom(activeInfo.tabId, activeInfo)
+});
+
+chrome.tabs.onZoomChange.addListener(function (zoomChangeInfo) {
+	setTabZoom(zoomChangeInfo.zoomSettings.id, zoomChangeInfo)
+});
+
 chrome.tabs.onCreated.addListener(function (tab) {
 	if (tab.pendingUrl != null) {
 		if (tab.pendingUrl.includes("chrome://")) {
@@ -15,29 +23,30 @@ chrome.tabs.onCreated.addListener(function (tab) {
 		}
 	}
 
-	var loaded = tab.status;
-	var i = 0;
+	var loaded = tab.status, i = 0;
 
 	while (loaded !== "complete") {
-		i = i + 1;
+		i++;
 
 		loaded = tab.status;
 
-		if (i > 200) {
+		if (i > 20) {
 			break;
 		}
+
+		sleep(100).then(() => {
+		});
 	}
-	setTabZoom();
 
-
+	setTabZoom(tab.id);
 });
-// Not used because this is called alot, might degrade performance..
+
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 	if (tabIds.has(tabId)) {
 		if (tabIds.get(tabId) === 6) { // This is specifically tuned to Vivaldis speed dial
 			tabIds.delete(tabId);
 			sleep(3000).then(() => {
-				setTabZoom()
+				setTabZoom(tabId)
 			});
 
 		} else {
@@ -45,19 +54,10 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 		}
 	}
 });
-chrome.tabs.onActivated.addListener(function (activeInfo) {
-	setTabZoom()
-});
-chrome.tabs.onZoomChange.addListener(function (zoomChangeInfo) {
-	setTabZoom(zoomChangeInfo)
-});
-chrome.tabs.onRemoved.addListener(function (tabId, removeInfo) {
 
-});
-
-
-function setTabZoom(info) {
+function setTabZoom(id, info) {
 	zoomVal = 1.6;
+	tabId = id;
 
 	// dont do anything on user zoom change
 	if (info != null) {
@@ -65,25 +65,24 @@ function setTabZoom(info) {
 		return
 	}
 
-	chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
-		// since only one tab should be active and in the current window at once
-		// the return variable should only have one entry
-		var activeTab = tabs[0];
+	if (tabId == null) {
+		tabId = getActiveTabId()
+	}
 
-		if (activeTab == null) {
-			return
+	// it seems not possible to fetch the availWidth/Height from the chrome extensions API
+	// fortunately this can be done by injection into each tab
+	chrome.tabs.executeScript(activeTab.id, {code: "screen.availWidth;"}, function t(availW) {
+		availW >= 1921 ? hrome.tabs.setZoom(activeTab.id, zoomVal) : chrome.tabs.setZoom(activeTab.id, 1.0);
+	});
+
+}
+
+function getActiveTabId() {
+	return chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
+		if (tabs[0] == null) {
+			return null
 		}
-
-		//alert("Your screen resolution is: " + window.screen.width * window.devicePixelRatio + "x" + window.screen.height * window.devicePixelRatio);
-
-		chrome.tabs.executeScript(activeTab.id, {code: "screen.availWidth;"}, function t(availW) {
-			if (availW >= 1921) {
-				chrome.tabs.setZoom(activeTab.id, zoomVal);
-			} else {
-				chrome.tabs.setZoom(activeTab.id, 1.0);
-			}
-		});
-
+		return tabs[0]
 	});
 }
 
@@ -93,5 +92,4 @@ function sleep(time) {
 
 function addKey(id) {
 	tabIds.set(id, 0);
-
 }
