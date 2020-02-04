@@ -11,14 +11,14 @@ chrome.tabs.onZoomChange.addListener(function (zoomChangeInfo) {
 chrome.tabs.onCreated.addListener(function (tab) {
 	if (tab.pendingUrl != null) {
 		if (tab.pendingUrl.includes("chrome://")) {
-			addKey(tab.id);
+			// addKey(tab.id);
 			return
 		}
 	}
 
 	if (tab.url != null) {
 		if (tab.url.includes("chrome://")) {
-			addKey(tab.id);
+			// addKey(tab.id);
 			return
 		}
 	}
@@ -40,30 +40,33 @@ chrome.tabs.onCreated.addListener(function (tab) {
 
 	setTabZoom(tab.id);
 });
-
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-	if (tabIds.has(tabId)) {
-		if (tabIds.get(tabId) === 6) { // This is specifically tuned to Vivaldis speed dial
-			tabIds.delete(tabId);
-			sleep(3000).then(() => {
-				setTabZoom(tabId)
-			});
-
-		} else {
-			tabIds.set(tabId, tabIds.get(tabId) + 1)
-		}
-	}
-});
+// Removed due to performance concerns
+// chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+// 	if (tabIds.has(tabId)) {
+// 		if (tabIds.get(tabId) === 6) { // This is specifically tuned to Vivaldis speed dial
+// 			tabIds.delete(tabId);
+// 			sleep(3000).then(() => {
+// 				setTabZoom(tabId)
+// 			});
+//
+// 		} else {
+// 			tabIds.set(tabId, tabIds.get(tabId) + 1)
+// 		}
+// 	}
+// });
 
 function setTabZoom(id, info) {
 	zoomVal = 1.6;
 	tabId = id;
 
 	// dont do anything on user zoom change
-	if (info != null) {
-		chrome.tabs.setZoom(info.id, info.zoomSettings.newZoomFactor);
-		return
+	if (info != null){
+		if (info.id != null) {
+			chrome.tabs.setZoom(info.id, info.zoomSettings.newZoomFactor);
+			return
+		}
 	}
+
 
 	if (tabId == null) {
 		tabId = getActiveTabId()
@@ -71,8 +74,8 @@ function setTabZoom(id, info) {
 
 	// it seems not possible to fetch the availWidth/Height from the chrome extensions API
 	// fortunately this can be done by injection into each tab
-	chrome.tabs.executeScript(activeTab.id, {code: "screen.availWidth;"}, function t(availW) {
-		availW >= 1921 ? hrome.tabs.setZoom(activeTab.id, zoomVal) : chrome.tabs.setZoom(activeTab.id, 1.0);
+	chrome.tabs.executeScript(tabId, {code: "screen.availWidth;"}, function t(availW) {
+		availW >= 1921 ? chrome.tabs.setZoom(tabId, zoomVal) : chrome.tabs.setZoom(tabId, 1.0);
 	});
 
 }
@@ -93,3 +96,4 @@ function sleep(time) {
 function addKey(id) {
 	tabIds.set(id, 0);
 }
+
